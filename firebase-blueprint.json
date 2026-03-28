@@ -1,0 +1,114 @@
+{
+  "entities": {
+    "Mistake": {
+      "title": "Mistake",
+      "description": "A record of a student's incorrect answer.",
+      "type": "object",
+      "properties": {
+        "question_id": {
+          "type": "string",
+          "description": "The ID of the question."
+        },
+        "wrong_answer": {
+          "type": "string",
+          "description": "The incorrect answer selected."
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "The time the mistake was made."
+        }
+      },
+      "required": ["question_id", "wrong_answer", "timestamp"]
+    },
+    "KnowledgeLevels": {
+      "title": "KnowledgeLevels",
+      "description": "The student's proficiency levels.",
+      "type": "object",
+      "properties": {
+        "biet": {
+          "type": "number",
+          "description": "Level of knowing."
+        },
+        "hieu": {
+          "type": "number",
+          "description": "Level of understanding."
+        },
+        "van_dung": {
+          "type": "number",
+          "description": "Level of applying."
+        }
+      },
+      "required": ["biet", "hieu", "van_dung"]
+    },
+    "ProgressData": {
+      "title": "ProgressData",
+      "description": "The progress data for a student in a specific lesson.",
+      "type": "object",
+      "properties": {
+        "student_id": {
+          "type": "string",
+          "description": "The UID of the student."
+        },
+        "student_name": {
+          "type": "string",
+          "description": "The name of the student."
+        },
+        "student_email": {
+          "type": "string",
+          "description": "The email of the student."
+        },
+        "lesson_id": {
+          "type": "string",
+          "description": "The ID of the lesson."
+        },
+        "time_spent": {
+          "type": "number",
+          "description": "Total time spent on the lesson in seconds."
+        },
+        "mistakes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/Mistake"
+          },
+          "description": "List of mistakes made."
+        },
+        "help_requests": {
+          "type": "number",
+          "description": "Number of times help was requested."
+        },
+        "knowledge_levels": {
+          "$ref": "#/entities/KnowledgeLevels",
+          "description": "The calculated knowledge levels."
+        },
+        "is_completed": {
+          "type": "boolean",
+          "description": "Whether the lesson is completed."
+        },
+        "last_updated": {
+          "type": "number",
+          "description": "Timestamp of the last update."
+        }
+      },
+      "required": [
+        "student_id",
+        "student_name",
+        "student_email",
+        "lesson_id",
+        "time_spent",
+        "mistakes",
+        "help_requests",
+        "knowledge_levels",
+        "is_completed",
+        "last_updated"
+      ]
+    }
+  },
+  "firestore": {
+    "/progress/{progressId}": {
+      "schema": {
+        "$ref": "#/entities/ProgressData"
+      },
+      "description": "Stores the progress data for each student per lesson. The document ID is typically {student_id}_{lesson_id}."
+    }
+  }
+}

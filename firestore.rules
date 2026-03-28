@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: progress
+    // Document ID: {userId}_{lessonId}
+    // Fields:
+    //   - student_id: string (required, must match uid)
+    //   - student_name: string (required)
+    //   - student_email: string (required)
+    //   - lesson_id: string (required)
+    //   - time_spent: number (required, >= 0)
+    //   - mistakes: list (required)
+    //   - help_requests: number (required, >= 0)
+    //   - knowledge_levels: map (required, contains biet, hieu, van_dung)
+    //   - is_completed: boolean (required)
+    //   - last_updated: number (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.student_id;
+    }
+
+    function uidUnchanged() {
+      return !('student_id' in request.resource.data) ||
+        request.resource.data.student_id == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('student_id' in request.resource.data) ||
+        request.resource.data.student_id == resource.data.student_id;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isTeacher() {
+      // In a real app, this should check a users collection or custom claims.
+      // For this prototype, we allow the specific teacher emails.
+      return isAuthenticated() && (
+        request.auth.token.email == 'hoatrang756@gmail.com' ||
+        request.auth.token.email == 'teacher@example.com'
+      );
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidMistake(mistake) {
+      return mistake is map &&
+             mistake.keys().hasOnly(['question_id', 'wrong_answer', 'timestamp']) &&
+             mistake.question_id is string && mistake.question_id.size() > 0 && mistake.question_id.size() < 100 &&
+             mistake.wrong_answer is string && mistake.wrong_answer.size() > 0 && mistake.wrong_answer.size() < 500 &&
+             mistake.timestamp is number;
+    }
+
+    function isValidMistakesList(mistakesList) {
+      return mistakesList is list && mistakesList.size() <= 1000; // Prevent massive arrays
+    }
+
+    function isValidKnowledgeLevels(levels) {
+      return levels is map &&
+             levels.keys().hasOnly(['biet', 'hieu', 'van_dung']) &&
+             levels.biet is number && levels.biet >= 0 && levels.biet <= 100 &&
+             levels.hieu is number && levels.hieu >= 0 && levels.hieu <= 100 &&
+             levels.van_dung is number && levels.van_dung >= 0 && levels.van_dung <= 100;
+    }
+
+    function isValidProgressData(data) {
+      return hasOnlyAllowedFields([
+               'student_id', 'student_name', 'student_email', 'lesson_id',
+               'time_spent', 'mistakes', 'help_requests', 'knowledge_levels',
+               'is_completed', 'last_updated'
+             ]) &&
+             data.student_id is string && data.student_id.size() > 0 && data.student_id.size() < 100 &&
+             data.student_name is string && data.student_name.size() > 0 && data.student_name.size() < 100 &&
+             data.student_email is string && data.student_email.size() > 0 && data.student_email.size() < 150 &&
+             data.lesson_id is string && data.lesson_id.size() > 0 && data.lesson_id.size() < 100 &&
+             data.time_spent is number && data.time_spent >= 0 &&
+             isValidMistakesList(data.mistakes) &&
+             data.help_requests is number && data.help_requests >= 0 &&
+             isValidKnowledgeLevels(data.knowledge_levels) &&
+             data.is_completed is bool &&
+             data.last_updated is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /progress/{progressId} {
+      // Teachers can read all progress. Students can only read their own.
+      allow read: if isTeacher() || (isAuthenticated() && progressId.split('_')[0] == request.auth.uid);
+      
+      // Only the student themselves can create their progress document.
+      allow create: if isAuthenticated() && 
+                       progressId.split('_')[0] == request.auth.uid &&
+                       isValidProgressData(request.resource.data) &&
+                       uidUnchanged();
+                       
+      // Only the student themselves can update their progress document.
+      allow update: if isAuthenticated() && 
+                       progressId.split('_')[0] == request.auth.uid &&
+                       isDocOwner() &&
+                       isValidProgressData(request.resource.data) &&
+                       uidNotModified();
+                       
+      allow delete: if false; // Progress should not be deleted
+    }
+  }
+}
