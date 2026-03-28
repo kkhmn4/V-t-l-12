@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { logMistake, logHelpRequest } from '../../lib/db';
 import { useNavigate } from 'react-router-dom';
 import { getAIHint } from '../../lib/ai';
+import ShortAnswerQuestion from './ShortAnswerQuestion';
 
 const Stage2 = () => {
   const { user } = useAuth();
@@ -12,6 +13,48 @@ const Stage2 = () => {
   const [showHint, setShowHint] = useState(false);
   const [aiHint, setAiHint] = useState<string>('');
   const [loadingHint, setLoadingHint] = useState(false);
+  const [saCompleted, setSaCompleted] = useState(false);
+
+  // Matching Game State
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [connections, setConnections] = useState<Record<string, string>>({});
+
+  const leftItems = [
+    { id: 'Z', label: 'Z', desc: 'Số hiệu nguyên tử' },
+    { id: 'A', label: 'A', desc: 'Số khối' },
+    { id: 'A-Z', label: 'A - Z', desc: 'Hiệu số khối' }
+  ];
+
+  const rightItems = [
+    { id: 'neutron', label: 'Số neutron' },
+    { id: 'proton', label: 'Số proton' },
+    { id: 'nucleon', label: 'Tổng số nucleon' }
+  ];
+
+  const correctConnections = {
+    'Z': 'proton',
+    'A': 'nucleon',
+    'A-Z': 'neutron'
+  };
+
+  const handleLeftClick = (id: string) => {
+    if (connections[id]) return;
+    setSelectedLeft(id === selectedLeft ? null : id);
+  };
+
+  const handleRightClick = (id: string) => {
+    if (!selectedLeft) return;
+    if (Object.values(connections).includes(id)) return;
+    
+    if (correctConnections[selectedLeft as keyof typeof correctConnections] === id) {
+      setConnections(prev => ({ ...prev, [selectedLeft]: id }));
+      setSelectedLeft(null);
+    } else {
+      setSelectedLeft(null);
+    }
+  };
+
+  const isMatchingComplete = Object.keys(connections).length === 3;
 
   const question = "Hạt nhân nguyên tử gồm:";
   const options = [
@@ -109,111 +152,167 @@ const Stage2 = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 relative">
               {/* Left Column */}
               <div className="space-y-4">
-                <div className="p-6 bg-surface-container-low rounded-lg border-2 border-transparent hover:border-primary transition-all cursor-pointer flex justify-between items-center group">
-                  <span className="text-3xl font-bold text-primary font-headline">Z</span>
-                  <span className="text-secondary font-medium">Số hiệu nguyên tử</span>
-                  <div className="w-4 h-4 rounded-full border-2 border-primary group-hover:bg-primary"></div>
-                </div>
-                <div className="p-6 bg-surface-container-low rounded-lg border-2 border-primary/40 flex justify-between items-center">
-                  <span className="text-3xl font-bold text-primary font-headline">A</span>
-                  <span className="text-secondary font-medium">Số khối</span>
-                  <div className="w-4 h-4 rounded-full bg-primary ring-4 ring-primary/20"></div>
-                </div>
-                <div className="p-6 bg-surface-container-low rounded-lg border-2 border-transparent hover:border-primary transition-all cursor-pointer flex justify-between items-center group">
-                  <span className="text-3xl font-bold text-primary font-headline">A - Z</span>
-                  <span className="text-secondary font-medium">Hiệu số khối</span>
-                  <div className="w-4 h-4 rounded-full border-2 border-primary group-hover:bg-primary"></div>
-                </div>
+                {leftItems.map((item) => {
+                  const isConnected = !!connections[item.id];
+                  const isSelected = selectedLeft === item.id;
+                  return (
+                    <div 
+                      key={item.id}
+                      onClick={() => handleLeftClick(item.id)}
+                      className={`p-6 rounded-lg border-2 transition-all cursor-pointer flex justify-between items-center group ${
+                        isConnected ? 'bg-green-50 border-green-500' : 
+                        isSelected ? 'bg-primary/10 border-primary' : 
+                        'bg-surface-container-low border-transparent hover:border-primary/50'
+                      }`}
+                    >
+                      <span className={`text-3xl font-bold font-headline ${isConnected ? 'text-green-700' : 'text-primary'}`}>{item.label}</span>
+                      <span className={`font-medium ${isConnected ? 'text-green-700' : 'text-secondary'}`}>{item.desc}</span>
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        isConnected ? 'bg-green-500 border-green-500' : 
+                        isSelected ? 'bg-primary border-primary ring-4 ring-primary/20' : 
+                        'border-primary group-hover:bg-primary/50'
+                      }`}></div>
+                    </div>
+                  );
+                })}
               </div>
               {/* Right Column */}
               <div className="space-y-4">
-                <div className="p-6 bg-surface-container-low rounded-lg border-2 border-transparent hover:border-primary transition-all cursor-pointer flex justify-between items-center group">
-                  <div className="w-4 h-4 rounded-full border-2 border-primary group-hover:bg-primary"></div>
-                  <span className="text-secondary font-medium">Số neutron</span>
-                </div>
-                <div className="p-6 bg-surface-container-low rounded-lg border-2 border-transparent hover:border-primary transition-all cursor-pointer flex justify-between items-center group">
-                  <div className="w-4 h-4 rounded-full border-2 border-primary group-hover:bg-primary"></div>
-                  <span className="text-secondary font-medium">Số proton</span>
-                </div>
-                <div className="p-6 bg-surface-container-low rounded-lg border-2 border-primary/40 flex justify-between items-center">
-                  <div className="w-4 h-4 rounded-full bg-primary ring-4 ring-primary/20"></div>
-                  <span className="text-secondary font-medium">Tổng số nucleon</span>
-                </div>
+                {rightItems.map((item) => {
+                  const connectedLeftId = Object.keys(connections).find(key => connections[key] === item.id);
+                  const isConnected = !!connectedLeftId;
+                  
+                  return (
+                    <div 
+                      key={item.id}
+                      onClick={() => handleRightClick(item.id)}
+                      className={`p-6 rounded-lg border-2 transition-all cursor-pointer flex justify-between items-center group ${
+                        isConnected ? 'bg-green-50 border-green-500' : 
+                        selectedLeft ? 'bg-surface-container-low border-primary/30 hover:border-primary hover:bg-primary/5' :
+                        'bg-surface-container-low border-transparent opacity-70'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        isConnected ? 'bg-green-500 border-green-500' : 
+                        selectedLeft ? 'border-primary group-hover:bg-primary/50' :
+                        'border-outline'
+                      }`}></div>
+                      <span className={`font-medium ${isConnected ? 'text-green-700 font-bold' : 'text-secondary'}`}>
+                        {isConnected ? `${connectedLeftId} - ${item.label}` : item.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-              {/* Connecting Line Simulation */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none hidden md:block">
-                <line x1="48%" y1="50%" x2="52%" y2="82%" stroke="#ad2c00" strokeWidth="2" strokeDasharray="4"></line>
-              </svg>
+              {isMatchingComplete && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl flex items-center justify-center animate-in fade-in z-10">
+                  <div className="bg-green-100 text-green-800 px-8 py-4 rounded-full font-bold text-xl flex items-center gap-3 shadow-xl">
+                    <span className="material-symbols-outlined text-3xl">task_alt</span>
+                    Tuyệt vời! Bạn đã nối đúng tất cả.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Unit Conversion Section */}
+          <div className="mb-16 p-6 bg-primary/5 border border-primary/20 rounded-xl">
+            <h4 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined">calculate</span>
+              Đơn vị khối lượng nguyên tử (amu)
+            </h4>
+            <p className="text-on-surface-variant mb-2">
+              Trong vật lý hạt nhân, khối lượng thường được đo bằng đơn vị khối lượng nguyên tử (kí hiệu là amu hoặc u).
+            </p>
+            <div className="bg-white p-4 rounded-lg border border-outline-variant font-mono text-center text-lg text-primary font-bold">
+              1 amu ≈ 1,6605 × 10<sup>-27</sup> kg
+            </div>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-on-surface-variant">
+              <div className="bg-white p-3 rounded border border-outline-variant">
+                Khối lượng proton (m<sub>p</sub>) ≈ 1,00728 amu
+              </div>
+              <div className="bg-white p-3 rounded border border-outline-variant">
+                Khối lượng neutron (m<sub>n</sub>) ≈ 1,00866 amu
+              </div>
             </div>
           </div>
 
           {/* Bento Grid for Knowledge & Application */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Knowledge Check Card */}
-            <div className="lg:col-span-2 p-8 bg-surface-container-high rounded-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <span className="material-symbols-outlined text-9xl">menu_book</span>
-              </div>
-              <h4 className="text-xl font-headline font-bold text-secondary mb-6 flex items-center gap-2">
-                <span className="material-symbols-outlined">quiz</span>
-                Kiểm tra kiến thức
-              </h4>
-              <p className="text-lg leading-relaxed text-on-surface mb-8">
-                Hạt nhân được tạo thành bởi hai loại hạt là proton và neutron, gọi chung là 
-                <input type="text" placeholder="..." className="mx-2 px-4 py-1 bg-white border-b-2 border-primary focus:outline-none rounded-t-md w-32 text-primary font-bold transition-all placeholder:text-outline-variant" />.
-              </p>
-              
-              <div className="space-y-6">
-                <p className="font-bold text-secondary">{question}</p>
-                <div className="grid grid-cols-1 gap-3">
-                  {options.map((option) => {
-                    const isSelected = selectedAnswer === option.id;
-                    const isCorrectOption = option.id === 'B';
-                    
-                    let labelStyle = "bg-white/50 border-transparent hover:border-primary/20 hover:bg-white";
-                    let textStyle = "text-on-surface-variant";
-                    let iconStyle = "opacity-0 hidden";
-                    let iconName = "check_circle";
+            <div className="lg:col-span-2 space-y-8">
+              <div className="p-8 bg-surface-container-high rounded-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <span className="material-symbols-outlined text-9xl">menu_book</span>
+                </div>
+                <h4 className="text-xl font-headline font-bold text-secondary mb-6 flex items-center gap-2">
+                  <span className="material-symbols-outlined">quiz</span>
+                  Kiểm tra kiến thức
+                </h4>
+                
+                <div className="space-y-6">
+                  <p className="font-bold text-secondary">{question}</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {options.map((option) => {
+                      const isSelected = selectedAnswer === option.id;
+                      const isCorrectOption = option.id === 'B';
+                      
+                      let labelStyle = "bg-white/50 border-transparent hover:border-primary/20 hover:bg-white";
+                      let textStyle = "text-on-surface-variant";
+                      let iconStyle = "opacity-0 hidden";
+                      let iconName = "check_circle";
 
-                    if (isSelected) {
-                      if (isCorrect) {
+                      if (isSelected) {
+                        if (isCorrect) {
+                          labelStyle = "bg-green-50 border-green-500";
+                          textStyle = "text-green-700 font-bold";
+                          iconStyle = "opacity-100 text-green-600 block";
+                        } else {
+                          labelStyle = "bg-red-50 border-red-500";
+                          textStyle = "text-red-700 font-bold";
+                          iconStyle = "opacity-100 text-red-600 block";
+                          iconName = "cancel";
+                        }
+                      } else if (selectedAnswer && isCorrectOption) {
                         labelStyle = "bg-green-50 border-green-500";
                         textStyle = "text-green-700 font-bold";
                         iconStyle = "opacity-100 text-green-600 block";
-                      } else {
-                        labelStyle = "bg-red-50 border-red-500";
-                        textStyle = "text-red-700 font-bold";
-                        iconStyle = "opacity-100 text-red-600 block";
-                        iconName = "cancel";
                       }
-                    } else if (selectedAnswer && isCorrectOption) {
-                      labelStyle = "bg-green-50 border-green-500";
-                      textStyle = "text-green-700 font-bold";
-                      iconStyle = "opacity-100 text-green-600 block";
-                    }
 
-                    return (
-                      <label 
-                        key={option.id}
-                        className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all border group ${labelStyle}`}
-                      >
-                        <input 
-                          type="radio" 
-                          name="atom" 
-                          className="w-5 h-5 text-primary border-outline focus:ring-primary"
-                          checked={isSelected}
-                          onChange={() => handleAnswer(option.id)}
-                          disabled={isCorrect === true}
-                        />
-                        <span className={`font-medium ${textStyle}`}>{option.id}. {option.text}</span>
-                        <span className={`ml-auto material-symbols-outlined ${iconStyle}`} style={{ fontVariationSettings: "'FILL' 1" }}>{iconName}</span>
-                      </label>
-                    );
-                  })}
+                      return (
+                        <label 
+                          key={option.id}
+                          className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all border group ${labelStyle}`}
+                        >
+                          <input 
+                            type="radio" 
+                            name="atom" 
+                            className="w-5 h-5 text-primary border-outline focus:ring-primary"
+                            checked={isSelected}
+                            onChange={() => handleAnswer(option.id)}
+                            disabled={isCorrect === true}
+                          />
+                          <span className={`font-medium ${textStyle}`}>{option.id}. {option.text}</span>
+                          <span className={`ml-auto material-symbols-outlined ${iconStyle}`} style={{ fontVariationSettings: "'FILL' 1" }}>{iconName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {isCorrect && (
+              <ShortAnswerQuestion
+                question="Tính số nguyên tử có trong 1g U235. (Cho NA = 6,022 × 10²³ mol⁻¹). Đáp án có dạng a × 10²¹, hãy điền giá trị của a (làm tròn đến 2 chữ số thập phân)."
+                correctAnswer={2.56}
+                tolerance={0.02}
+                onComplete={(isCorrect) => {
+                  if (isCorrect) {
+                    setSaCompleted(true);
+                  }
+                }}
+              />
+
+              {isCorrect && isMatchingComplete && saCompleted && (
                 <div className="mt-8 flex justify-end animate-in fade-in">
                   <button 
                     onClick={() => navigate('/learn/stage-3')}

@@ -3,6 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { logMistake, logHelpRequest } from '../../lib/db';
 import { useNavigate } from 'react-router-dom';
 import { getAIHint } from '../../lib/ai';
+import TrueFalseQuestion from './TrueFalseQuestion';
+import ForceVectorTask from './ForceVectorTask';
 
 const Stage1 = () => {
   const { user } = useAuth();
@@ -12,6 +14,8 @@ const Stage1 = () => {
   const [showHint, setShowHint] = useState(false);
   const [aiHint, setAiHint] = useState<string>('');
   const [loadingHint, setLoadingHint] = useState(false);
+  const [tfCompleted, setTfCompleted] = useState(false);
+  const [forceTaskCompleted, setForceTaskCompleted] = useState(false);
 
   const question = "Bản chất hạt alpha là hạt nhân của nguyên tố nào?";
   const options = [
@@ -19,6 +23,13 @@ const Stage1 = () => {
     { id: 'B', text: 'Hydrogen' },
     { id: 'C', text: 'Nitrogen' },
     { id: 'D', text: 'Lithium' }
+  ];
+
+  const tfStatements = [
+    { id: 'a', text: 'Phần lớn thể tích của nguyên tử vàng là khoảng trống.', isTrue: true },
+    { id: 'b', text: 'Lực làm lệch hướng hạt alpha là lực hấp dẫn giữa hai khối lượng.', isTrue: false },
+    { id: 'c', text: 'Kích thước của hạt nhân lớn hơn nhiều so với kích thước nguyên tử.', isTrue: false },
+    { id: 'd', text: 'Hạt nhân vàng tập trung hầu hết khối lượng của nguyên tử.', isTrue: true }
   ];
 
   const handleAnswer = async (answer: string) => {
@@ -55,54 +66,45 @@ const Stage1 = () => {
     setLoadingHint(false);
   };
 
+  const handleTfComplete = (success: boolean) => {
+    setTfCompleted(success);
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Section 1: Visual Simulation */}
-      <section className="relative h-[614px] bg-[#000c24] overflow-hidden flex flex-col items-center justify-center rounded-3xl mx-4 lg:mx-0 mt-6 shadow-2xl">
-        {/* Chamber Aesthetics */}
-        <div className="absolute inset-0 particle-stream opacity-10"></div>
-        <div className="absolute top-8 left-12 flex flex-col gap-2">
-          <span className="text-white/40 text-xs font-label uppercase tracking-[0.3em]">Chặng 1</span>
-          <h1 className="text-white text-4xl font-extrabold font-headline tracking-tight">Thí nghiệm tán xạ alpha</h1>
-        </div>
-
-        {/* Simulation Stage */}
-        <div className="relative w-full max-w-5xl h-64 flex items-center justify-between px-20">
-          {/* Alpha Source */}
-          <div className="relative flex flex-col items-center">
-            <div className="w-16 h-16 bg-surface-variant/20 rounded-lg border border-white/10 flex items-center justify-center relative z-10 backdrop-blur-md">
-              <div className="w-8 h-8 bg-primary rounded-full blur-sm animate-pulse"></div>
-              <div className="w-4 h-4 bg-white rounded-full absolute"></div>
+      {/* Hero Visual Section */}
+      <section className="relative w-full bg-gradient-to-br from-[#000c24] to-primary/20 rounded-3xl mx-4 lg:mx-0 mt-6 shadow-2xl overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-center justify-between p-8 lg:p-12 gap-12">
+          {/* Left: Title & Description */}
+          <div className="relative z-10 flex flex-col lg:w-1/2 text-white">
+            <span className="text-white/60 text-sm font-label uppercase tracking-[0.3em] mb-4">Chặng 1</span>
+            <h1 className="text-4xl lg:text-5xl font-extrabold font-headline tracking-tight mb-6">Thí nghiệm tán xạ alpha</h1>
+            <p className="text-lg text-white/80 leading-relaxed mb-8">
+              Khám phá thí nghiệm lịch sử của Ernest Rutherford đã làm thay đổi hoàn toàn quan niệm của chúng ta về cấu trúc nguyên tử, chứng minh sự tồn tại của hạt nhân.
+            </p>
+            <div className="flex items-center gap-4 text-sm text-white/60 bg-white/5 p-4 rounded-xl border border-white/10 w-fit">
+              <span className="material-symbols-outlined text-primary">info</span>
+              <span>Xem video mô phỏng để hiểu rõ quá trình tán xạ</span>
             </div>
-            <span className="text-white/60 text-[10px] mt-2 font-label uppercase tracking-widest">Alpha Source (He2+)</span>
           </div>
-
-          {/* Particle Beams */}
-          <div className="flex-1 h-px bg-gradient-to-r from-primary/50 via-primary to-transparent relative mx-4">
-            <div className="absolute top-[-4px] left-0 w-2 h-2 bg-primary-fixed-dim rounded-full shadow-[0_0_8px_#ffb5a0] translate-x-10"></div>
-            <div className="absolute top-[-4px] left-0 w-2 h-2 bg-primary-fixed-dim rounded-full shadow-[0_0_8px_#ffb5a0] translate-x-40"></div>
-            <div className="absolute top-[-4px] left-0 w-2 h-2 bg-primary-fixed-dim rounded-full shadow-[0_0_8px_#ffb5a0] translate-x-80"></div>
-          </div>
-
-          {/* Gold Foil */}
-          <div className="relative flex flex-col items-center">
-            <div className="w-2 h-40 bg-gradient-to-b from-[#ffd700]/20 via-[#ffd700] to-[#ffd700]/20 rounded-full shadow-[0_0_20px_#7e5300] relative z-20"></div>
-            <span className="text-[#ffd700] text-[10px] mt-2 font-label uppercase tracking-widest">Lá vàng (Gold Foil)</span>
-            {/* Deflected Particle Path */}
-            <svg className="absolute top-1/2 left-0 w-32 h-32 -translate-y-1/2 -translate-x-full overflow-visible pointer-events-none">
-              <path className="opacity-80" d="M 0 64 L 110 64 Q 128 64 120 20" fill="none" stroke="#ad2c00" strokeDasharray="4 4" strokeWidth="2"></path>
-            </svg>
-          </div>
-
-          {/* Detector Screen */}
-          <div className="w-4 h-52 bg-white/5 border border-white/10 rounded-full flex items-center justify-center">
-            <div className="w-1 h-4 bg-primary/40 rounded-full"></div>
+          
+          {/* Right: YouTube Video */}
+          <div className="w-full lg:w-1/2 aspect-video rounded-xl overflow-hidden shadow-2xl border-4 border-white/10 bg-black/20">
+            <iframe 
+              className="w-full h-full" 
+              src="https://www.youtube.com/embed/kBgIMRV895w" 
+              title="Rutherford Scattering Experiment" 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen
+              referrerPolicy="no-referrer"
+            ></iframe>
           </div>
         </div>
       </section>
 
       {/* Section 2: Learning Task */}
-      <section className="px-4 lg:px-12 -mt-20 relative z-30">
+      <section className="px-4 lg:px-12 -mt-8 relative z-30">
         <div className="max-w-6xl mx-auto bg-surface-container-lowest rounded-xl shadow-[0_64px_128px_rgba(0,12,36,0.08)] p-8 lg:p-12 grid grid-cols-1 lg:grid-cols-2 gap-16">
           
           {/* Left Column: Interaction */}
@@ -141,18 +143,19 @@ const Stage1 = () => {
             </div>
 
             <div className="space-y-4 pt-6 border-t border-outline-variant/10">
-              <label className="block font-label text-sm font-semibold text-secondary uppercase tracking-wider">Nhiệm vụ 2: Kiểm tra kiến thức</label>
-              <div className="text-lg text-on-surface flex flex-wrap items-center gap-x-2 leading-loose">
-                Hiện tượng lệch hướng chuyển động của hạt alpha khi đến gần hạt nhân vàng gọi là hiện tượng
-                <input type="text" placeholder="..." className="border-b-2 border-primary/20 bg-transparent px-2 w-32 text-center focus:border-primary focus:ring-0 transition-all font-bold text-primary outline-none" />
+              <label className="block font-label text-sm font-semibold text-secondary uppercase tracking-wider">Nhiệm vụ 2: Bản chất lực tương tác</label>
+              <div className="text-base text-on-surface-variant leading-relaxed bg-primary/5 p-4 rounded-xl border border-primary/10">
+                <p className="mb-2">Hạt <span className="font-bold text-primary">α</span> mang điện tích dương (+2e), hạt nhân Vàng cũng mang điện dương rất lớn (+79e).</p>
+                <p>Sự lệch hướng đột ngột của hạt α khi tiến gần hạt nhân chính là do <strong>lực đẩy tĩnh điện Coulomb</strong>. Lực này tỉ lệ nghịch với bình phương khoảng cách, nên khi tiến càng gần, lực đẩy càng mạnh khiến hạt bị bật ngược trở lại.</p>
               </div>
+              <ForceVectorTask onComplete={(correct) => setForceTaskCompleted(correct)} />
             </div>
           </div>
 
           {/* Right Column: Application */}
           <div className="space-y-10 bg-surface-container-low/50 p-8 rounded-xl">
             <div>
-              <span className="inline-block py-1 px-3 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold font-label uppercase tracking-widest rounded-full mb-4">Câu hỏi ứng dụng</span>
+              <span className="inline-block py-1 px-3 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold font-label uppercase tracking-widest rounded-full mb-4">Phần 1: Trắc nghiệm 4 lựa chọn</span>
               <h3 className="text-2xl text-secondary font-bold leading-tight">{question}</h3>
             </div>
 
@@ -222,7 +225,16 @@ const Stage1 = () => {
               </div>
             )}
 
-            {isCorrect && (
+            <div className="pt-8 border-t border-outline-variant/20">
+              <span className="inline-block py-1 px-3 bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold font-label uppercase tracking-widest rounded-full mb-4">Phần 2: Trắc nghiệm Đúng/Sai</span>
+              <TrueFalseQuestion 
+                question="Cho đoạn thông tin về kết quả thí nghiệm tán xạ α. Xác định tính Đúng/Sai của các phát biểu sau:"
+                statements={tfStatements}
+                onComplete={handleTfComplete}
+              />
+            </div>
+
+            {isCorrect && tfCompleted && forceTaskCompleted && (
               <div className="mt-8 flex justify-end animate-in fade-in">
                 <button 
                   onClick={() => navigate('/learn/stage-2')}
@@ -233,41 +245,17 @@ const Stage1 = () => {
                 </button>
               </div>
             )}
+            {(!isCorrect || !tfCompleted || !forceTaskCompleted) && (
+              <div className="mt-8 p-4 bg-surface-container-low rounded-xl text-center">
+                <p className="text-sm text-on-surface-variant">
+                  * Hoàn thành tất cả các nhiệm vụ và câu hỏi để mở khóa chặng tiếp theo
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Section 3: Signature Stats Section */}
-      <section className="px-4 lg:px-12 py-24 bg-surface max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-20">
-        <div className="w-full md:w-1/2">
-          <div className="relative">
-            <iframe 
-              className="w-full h-80 rounded-xl shadow-xl" 
-              src="https://www.youtube.com/embed/kBgIMRV895w" 
-              title="Rutherford Scattering Experiment" 
-              frameBorder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowFullScreen
-            ></iframe>
-            <div className="absolute -bottom-10 -right-10 bg-primary-container p-8 rounded-xl shadow-2xl text-white max-w-xs hidden md:block">
-              <p className="text-xs font-label uppercase tracking-widest mb-2 opacity-80">Rutherford's Legacy</p>
-              <p className="text-sm italic leading-relaxed">"Nó giống như việc bạn bắn một viên đạn 15 inch vào một mảnh giấy mỏng và nó quay lại bắn trúng bạn."</p>
-            </div>
-          </div>
-        </div>
-        <div className="w-full md:w-1/2 space-y-8">
-          <div className="space-y-2">
-            <span className="text-primary font-headline text-6xl font-extrabold tracking-tighter">99.9%</span>
-            <p className="text-secondary font-headline text-2xl font-bold">Số lượng hạt đi thẳng</p>
-            <p className="text-on-surface-variant text-base max-w-sm">Hầu hết các hạt alpha đi xuyên qua lá vàng mà không bị lệch hướng, chứng tỏ nguyên tử có cấu tạo rỗng.</p>
-          </div>
-          <div className="space-y-2">
-            <span className="text-tertiary font-headline text-6xl font-extrabold tracking-tighter">1/8000</span>
-            <p className="text-secondary font-headline text-2xl font-bold">Hạt bị bật ngược lại</p>
-            <p className="text-on-surface-variant text-base max-w-sm">Tỷ lệ cực nhỏ các hạt bị tán xạ với góc lớn hơn 90 độ chứng tỏ sự tồn tại của một hạt nhân nhỏ bé nhưng cực kỳ đặc.</p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

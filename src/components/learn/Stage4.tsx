@@ -3,6 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { logMistake, logHelpRequest, completeLesson } from '../../lib/db';
 import { useNavigate } from 'react-router-dom';
 import { getAIHint } from '../../lib/ai';
+import TrueFalseQuestion from './TrueFalseQuestion';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Stage4 = () => {
   const { user } = useAuth();
@@ -13,6 +15,7 @@ const Stage4 = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [aiHint, setAiHint] = useState<string>('');
   const [loadingHint, setLoadingHint] = useState(false);
+  const [tfCompleted, setTfCompleted] = useState(false);
 
   const question = "Đồng vị là những nguyên tử mà hạt nhân có:";
   const options = [
@@ -21,13 +24,21 @@ const Stage4 = () => {
     { id: 'C', text: 'Cùng số khối A' }
   ];
 
+  const tfQuestion = "Cho các phát biểu sau về các đồng vị của Hydrogen:";
+  const tfStatements = [
+    { id: 'a', text: "Các đồng vị của Hydrogen có cùng tính chất hóa học.", isTrue: true },
+    { id: 'b', text: "Tritium là đồng vị bền của Hydrogen.", isTrue: false },
+    { id: 'c', text: "Nước nặng (D₂O) được tạo thành từ đồng vị Deuterium.", isTrue: true },
+    { id: 'd', text: "Hạt nhân Protium không chứa neutron.", isTrue: true }
+  ];
+
   const handleAnswer = async (answer: string) => {
     setSelectedAnswer(answer);
     setShowHint(false);
     setAiHint('');
     if (answer === 'A') {
       setIsCorrect(true);
-      if (user && !isCompleted) {
+      if (user && !isCompleted && tfCompleted) {
         // Just a mock calculation for knowledge levels
         await completeLesson(user.uid, { biet: 100, hieu: 100, van_dung: 100 });
         setIsCompleted(true);
@@ -59,6 +70,12 @@ const Stage4 = () => {
     }
     setLoadingHint(false);
   };
+
+  const carbonData = [
+    { name: 'C-12', abundance: 98.9 },
+    { name: 'C-13', abundance: 1.1 },
+    { name: 'C-14', abundance: 0.0000000001 } // Trace amount, just for illustration
+  ];
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -133,30 +150,48 @@ const Stage4 = () => {
       <section className="max-w-6xl mx-auto px-4 lg:px-6 -mt-16 relative z-20">
         <div className="bg-surface-container-lowest rounded-xl shadow-2xl p-8 lg:p-12 border border-outline-variant/10">
           
-          {/* Isotope Comparison */}
+          {/* Isotope Comparison & Mass Spectrum */}
           <div className="mb-16">
             <div className="flex items-center gap-3 mb-8">
               <span className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
                 <span className="material-symbols-outlined">family_history</span>
               </span>
-              <h3 className="text-2xl font-headline font-bold text-secondary">Đặc điểm nhận dạng</h3>
+              <h3 className="text-2xl font-headline font-bold text-secondary">Đặc điểm nhận dạng & Phổ khối lượng</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-surface-container-low p-6 rounded-2xl border-l-4 border-primary">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="material-symbols-outlined text-primary">check_circle</span>
-                  <h4 className="font-bold text-lg text-on-surface">Giống nhau</h4>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="flex flex-col gap-6">
+                <div className="bg-surface-container-low p-6 rounded-2xl border-l-4 border-primary">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="material-symbols-outlined text-primary">check_circle</span>
+                    <h4 className="font-bold text-lg text-on-surface">Giống nhau</h4>
+                  </div>
+                  <p className="text-on-surface-variant">Cùng số proton (Z). Do đó chúng có cùng vị trí trong bảng tuần hoàn và tính chất hóa học giống nhau.</p>
                 </div>
-                <p className="text-on-surface-variant">Cùng số proton (Z). Do đó chúng có cùng vị trí trong bảng tuần hoàn và tính chất hóa học giống nhau.</p>
+                
+                <div className="bg-surface-container-low p-6 rounded-2xl border-l-4 border-tertiary">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="material-symbols-outlined text-tertiary">difference</span>
+                    <h4 className="font-bold text-lg text-on-surface">Khác nhau</h4>
+                  </div>
+                  <p className="text-on-surface-variant">Khác số neutron (N). Dẫn đến số khối (A) khác nhau và tính chất vật lý có thể khác nhau (ví dụ tính phóng xạ).</p>
+                </div>
               </div>
-              
-              <div className="bg-surface-container-low p-6 rounded-2xl border-l-4 border-tertiary">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="material-symbols-outlined text-tertiary">difference</span>
-                  <h4 className="font-bold text-lg text-on-surface">Khác nhau</h4>
+
+              <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/20">
+                <h4 className="font-bold text-lg text-on-surface mb-2 text-center">Phổ khối lượng của Carbon</h4>
+                <p className="text-sm text-on-surface-variant mb-6 text-center">Tỉ lệ phần trăm các đồng vị trong tự nhiên</p>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={carbonData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                      <XAxis dataKey="name" tick={{fontSize: 12}} />
+                      <YAxis tick={{fontSize: 12}} label={{ value: 'Tỉ lệ (%)', angle: -90, position: 'insideLeft', fontSize: 12 }} />
+                      <Tooltip formatter={(value: number) => [`${value}%`, 'Tỉ lệ']} />
+                      <Bar dataKey="abundance" fill="#005cbb" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                <p className="text-on-surface-variant">Khác số neutron (N). Dẫn đến số khối (A) khác nhau và tính chất vật lý có thể khác nhau (ví dụ tính phóng xạ).</p>
               </div>
             </div>
           </div>
@@ -164,64 +199,80 @@ const Stage4 = () => {
           {/* Bento Grid for Knowledge */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Knowledge Check Card */}
-            <div className="lg:col-span-2 p-8 bg-surface-container-high rounded-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <span className="material-symbols-outlined text-9xl">quiz</span>
-              </div>
-              <h4 className="text-xl font-headline font-bold text-secondary mb-6 flex items-center gap-2">
-                <span className="material-symbols-outlined">school</span>
-                Kiểm tra kiến thức
-              </h4>
-              
-              <div className="space-y-6">
-                <p className="font-bold text-secondary text-lg">{question}</p>
-                <div className="grid grid-cols-1 gap-3">
-                  {options.map((option) => {
-                    const isSelected = selectedAnswer === option.id;
-                    const isCorrectOption = option.id === 'A';
-                    
-                    let labelStyle = "bg-white/50 border-transparent hover:border-primary/20 hover:bg-white";
-                    let textStyle = "text-on-surface-variant";
-                    let iconStyle = "opacity-0 hidden";
-                    let iconName = "check_circle";
+            <div className="lg:col-span-2 space-y-8">
+              <div className="p-8 bg-surface-container-high rounded-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <span className="material-symbols-outlined text-9xl">quiz</span>
+                </div>
+                <h4 className="text-xl font-headline font-bold text-secondary mb-6 flex items-center gap-2">
+                  <span className="material-symbols-outlined">school</span>
+                  Kiểm tra kiến thức
+                </h4>
+                
+                <div className="space-y-6">
+                  <p className="font-bold text-secondary text-lg">{question}</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {options.map((option) => {
+                      const isSelected = selectedAnswer === option.id;
+                      const isCorrectOption = option.id === 'A';
+                      
+                      let labelStyle = "bg-white/50 border-transparent hover:border-primary/20 hover:bg-white";
+                      let textStyle = "text-on-surface-variant";
+                      let iconStyle = "opacity-0 hidden";
+                      let iconName = "check_circle";
 
-                    if (isSelected) {
-                      if (isCorrect) {
+                      if (isSelected) {
+                        if (isCorrect) {
+                          labelStyle = "bg-green-50 border-green-500";
+                          textStyle = "text-green-700 font-bold";
+                          iconStyle = "opacity-100 text-green-600 block";
+                        } else {
+                          labelStyle = "bg-red-50 border-red-500";
+                          textStyle = "text-red-700 font-bold";
+                          iconStyle = "opacity-100 text-red-600 block";
+                          iconName = "cancel";
+                        }
+                      } else if (selectedAnswer && isCorrectOption) {
                         labelStyle = "bg-green-50 border-green-500";
                         textStyle = "text-green-700 font-bold";
                         iconStyle = "opacity-100 text-green-600 block";
-                      } else {
-                        labelStyle = "bg-red-50 border-red-500";
-                        textStyle = "text-red-700 font-bold";
-                        iconStyle = "opacity-100 text-red-600 block";
-                        iconName = "cancel";
                       }
-                    } else if (selectedAnswer && isCorrectOption) {
-                      labelStyle = "bg-green-50 border-green-500";
-                      textStyle = "text-green-700 font-bold";
-                      iconStyle = "opacity-100 text-green-600 block";
-                    }
 
-                    return (
-                      <label 
-                        key={option.id}
-                        className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all border group ${labelStyle}`}
-                      >
-                        <input 
-                          type="radio" 
-                          name="isotope" 
-                          className="w-5 h-5 text-primary border-outline focus:ring-primary"
-                          checked={isSelected}
-                          onChange={() => handleAnswer(option.id)}
-                          disabled={isCorrect === true}
-                        />
-                        <span className={`font-medium ${textStyle}`}>{option.id}. {option.text}</span>
-                        <span className={`ml-auto material-symbols-outlined ${iconStyle}`} style={{ fontVariationSettings: "'FILL' 1" }}>{iconName}</span>
-                      </label>
-                    );
-                  })}
+                      return (
+                        <label 
+                          key={option.id}
+                          className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all border group ${labelStyle}`}
+                        >
+                          <input 
+                            type="radio" 
+                            name="isotope" 
+                            className="w-5 h-5 text-primary border-outline focus:ring-primary"
+                            checked={isSelected}
+                            onChange={() => handleAnswer(option.id)}
+                            disabled={isCorrect === true}
+                          />
+                          <span className={`font-medium ${textStyle}`}>{option.id}. {option.text}</span>
+                          <span className={`ml-auto material-symbols-outlined ${iconStyle}`} style={{ fontVariationSettings: "'FILL' 1" }}>{iconName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+
+              <TrueFalseQuestion
+                question={tfQuestion}
+                statements={tfStatements}
+                onComplete={(isCorrect) => {
+                  if (isCorrect) {
+                    setTfCompleted(true);
+                    if (user && isCorrect === true && !isCompleted) {
+                      completeLesson(user.uid, { biet: 100, hieu: 100, van_dung: 100 });
+                      setIsCompleted(true);
+                    }
+                  }
+                }}
+              />
 
               {isCompleted && (
                 <div className="mt-8 p-6 bg-primary-container border border-primary/20 rounded-2xl flex flex-col items-center text-center animate-in zoom-in duration-500">

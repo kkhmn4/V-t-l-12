@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { logMistake, logHelpRequest } from '../../lib/db';
 import { useNavigate } from 'react-router-dom';
 import { getAIHint } from '../../lib/ai';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ShortAnswerQuestion from './ShortAnswerQuestion';
 
 const Stage3 = () => {
   const { user } = useAuth();
@@ -12,6 +14,7 @@ const Stage3 = () => {
   const [showHint, setShowHint] = useState(false);
   const [aiHint, setAiHint] = useState<string>('');
   const [loadingHint, setLoadingHint] = useState(false);
+  const [saCompleted, setSaCompleted] = useState(false);
 
   const question = "Lực hạt nhân có bản chất là:";
   const options = [
@@ -53,6 +56,17 @@ const Stage3 = () => {
     }
     setLoadingHint(false);
   };
+
+  const graphData = useMemo(() => {
+    const data = [];
+    for (let A = 1; A <= 250; A += 10) {
+      data.push({
+        A: A,
+        R: parseFloat((1.2 * Math.pow(A, 1/3)).toFixed(2))
+      });
+    }
+    return data;
+  }, []);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -116,36 +130,54 @@ const Stage3 = () => {
       <section className="max-w-6xl mx-auto px-4 lg:px-6 -mt-16 relative z-20">
         <div className="bg-surface-container-lowest rounded-xl shadow-2xl p-8 lg:p-12 border border-outline-variant/10">
           
-          {/* Interactive Force Balance */}
+          {/* Interactive Force Balance & Graph */}
           <div className="mb-16">
             <div className="flex items-center gap-3 mb-8">
               <span className="w-10 h-10 rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary">
                 <span className="material-symbols-outlined">compare_arrows</span>
               </span>
-              <h3 className="text-2xl font-headline font-bold text-secondary">Cuộc chiến các lực</h3>
+              <h3 className="text-2xl font-headline font-bold text-secondary">Cuộc chiến các lực & Kích thước hạt nhân</h3>
             </div>
             
-            <div className="bg-surface-container-low rounded-2xl p-8 border border-outline-variant/20">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-12">
-                {/* Electrostatic Repulsion */}
-                <div className="flex flex-col items-center text-center max-w-xs">
-                  <div className="w-20 h-20 rounded-full bg-error-container text-error flex items-center justify-center mb-4 shadow-lg">
-                    <span className="material-symbols-outlined text-4xl">electric_bolt</span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-surface-container-low rounded-2xl p-8 border border-outline-variant/20 flex flex-col justify-center">
+                <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+                  {/* Electrostatic Repulsion */}
+                  <div className="flex flex-col items-center text-center max-w-[150px]">
+                    <div className="w-16 h-16 rounded-full bg-error-container text-error flex items-center justify-center mb-4 shadow-lg">
+                      <span className="material-symbols-outlined text-3xl">electric_bolt</span>
+                    </div>
+                    <h4 className="font-bold text-on-surface mb-2">Lực tĩnh điện</h4>
+                    <p className="text-xs text-on-surface-variant">Đẩy các proton ra xa nhau.</p>
                   </div>
-                  <h4 className="font-bold text-on-surface mb-2">Lực tĩnh điện</h4>
-                  <p className="text-sm text-on-surface-variant">Đẩy các proton ra xa nhau vì chúng cùng mang điện dương.</p>
+
+                  {/* VS */}
+                  <div className="text-3xl font-headline font-black text-outline-variant italic">VS</div>
+
+                  {/* Strong Nuclear Force */}
+                  <div className="flex flex-col items-center text-center max-w-[150px]">
+                    <div className="w-20 h-20 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center mb-4 shadow-xl ring-8 ring-tertiary/20">
+                      <span className="material-symbols-outlined text-4xl">link</span>
+                    </div>
+                    <h4 className="font-bold text-on-surface mb-2">Lực hạt nhân</h4>
+                    <p className="text-xs text-on-surface-variant">Lực hút cực mạnh, tác dụng trong phạm vi rất ngắn (~10⁻¹⁵ m).</p>
+                  </div>
                 </div>
+              </div>
 
-                {/* VS */}
-                <div className="text-4xl font-headline font-black text-outline-variant italic">VS</div>
-
-                {/* Strong Nuclear Force */}
-                <div className="flex flex-col items-center text-center max-w-xs">
-                  <div className="w-24 h-24 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center mb-4 shadow-xl ring-8 ring-tertiary/20">
-                    <span className="material-symbols-outlined text-5xl">link</span>
-                  </div>
-                  <h4 className="font-bold text-on-surface mb-2 text-lg">Lực hạt nhân</h4>
-                  <p className="text-sm text-on-surface-variant">Lực hút cực mạnh giữ các nucleon lại với nhau, chiến thắng lực đẩy tĩnh điện.</p>
+              <div className="bg-surface-container-low rounded-2xl p-8 border border-outline-variant/20">
+                <h4 className="font-bold text-on-surface mb-4 text-center">Đồ thị Bán kính (R) theo Số khối (A)</h4>
+                <p className="text-sm text-center text-on-surface-variant mb-4 font-mono">R = 1,2 × 10⁻¹⁵ × A^1/3 (m)</p>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={graphData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                      <XAxis dataKey="A" type="number" domain={[0, 250]} tick={{fontSize: 12}} label={{ value: 'Số khối A', position: 'insideBottomRight', offset: -5, fontSize: 12 }} />
+                      <YAxis tick={{fontSize: 12}} label={{ value: 'R (fm)', angle: -90, position: 'insideLeft', fontSize: 12 }} />
+                      <Tooltip formatter={(value: number) => [`${value} fm`, 'Bán kính R']} labelFormatter={(label) => `Số khối A: ${label}`} />
+                      <Line type="monotone" dataKey="R" stroke="#ad2c00" strokeWidth={3} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
@@ -154,66 +186,79 @@ const Stage3 = () => {
           {/* Bento Grid for Knowledge */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Knowledge Check Card */}
-            <div className="lg:col-span-2 p-8 bg-surface-container-high rounded-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <span className="material-symbols-outlined text-9xl">science</span>
-              </div>
-              <h4 className="text-xl font-headline font-bold text-secondary mb-6 flex items-center gap-2">
-                <span className="material-symbols-outlined">quiz</span>
-                Kiểm tra kiến thức
-              </h4>
-              
-              <div className="space-y-6">
-                <p className="font-bold text-secondary text-lg">{question}</p>
-                <div className="grid grid-cols-1 gap-3">
-                  {options.map((option) => {
-                    const isSelected = selectedAnswer === option.id;
-                    const isCorrectOption = option.id === 'C';
-                    
-                    let labelStyle = "bg-white/50 border-transparent hover:border-tertiary/20 hover:bg-white";
-                    let textStyle = "text-on-surface-variant";
-                    let iconStyle = "opacity-0 hidden";
-                    let iconName = "check_circle";
+            <div className="lg:col-span-2 space-y-8">
+              <div className="p-8 bg-surface-container-high rounded-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <span className="material-symbols-outlined text-9xl">science</span>
+                </div>
+                <h4 className="text-xl font-headline font-bold text-secondary mb-6 flex items-center gap-2">
+                  <span className="material-symbols-outlined">quiz</span>
+                  Kiểm tra kiến thức
+                </h4>
+                
+                <div className="space-y-6">
+                  <p className="font-bold text-secondary text-lg">{question}</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {options.map((option) => {
+                      const isSelected = selectedAnswer === option.id;
+                      const isCorrectOption = option.id === 'C';
+                      
+                      let labelStyle = "bg-white/50 border-transparent hover:border-tertiary/20 hover:bg-white";
+                      let textStyle = "text-on-surface-variant";
+                      let iconStyle = "opacity-0 hidden";
+                      let iconName = "check_circle";
 
-                    if (isSelected) {
-                      if (isCorrect) {
+                      if (isSelected) {
+                        if (isCorrect) {
+                          labelStyle = "bg-green-50 border-green-500";
+                          textStyle = "text-green-700 font-bold";
+                          iconStyle = "opacity-100 text-green-600 block";
+                        } else {
+                          labelStyle = "bg-red-50 border-red-500";
+                          textStyle = "text-red-700 font-bold";
+                          iconStyle = "opacity-100 text-red-600 block";
+                          iconName = "cancel";
+                        }
+                      } else if (selectedAnswer && isCorrectOption) {
                         labelStyle = "bg-green-50 border-green-500";
                         textStyle = "text-green-700 font-bold";
                         iconStyle = "opacity-100 text-green-600 block";
-                      } else {
-                        labelStyle = "bg-red-50 border-red-500";
-                        textStyle = "text-red-700 font-bold";
-                        iconStyle = "opacity-100 text-red-600 block";
-                        iconName = "cancel";
                       }
-                    } else if (selectedAnswer && isCorrectOption) {
-                      labelStyle = "bg-green-50 border-green-500";
-                      textStyle = "text-green-700 font-bold";
-                      iconStyle = "opacity-100 text-green-600 block";
-                    }
 
-                    return (
-                      <label 
-                        key={option.id}
-                        className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all border group ${labelStyle}`}
-                      >
-                        <input 
-                          type="radio" 
-                          name="force" 
-                          className="w-5 h-5 text-tertiary border-outline focus:ring-tertiary"
-                          checked={isSelected}
-                          onChange={() => handleAnswer(option.id)}
-                          disabled={isCorrect === true}
-                        />
-                        <span className={`font-medium ${textStyle}`}>{option.id}. {option.text}</span>
-                        <span className={`ml-auto material-symbols-outlined ${iconStyle}`} style={{ fontVariationSettings: "'FILL' 1" }}>{iconName}</span>
-                      </label>
-                    );
-                  })}
+                      return (
+                        <label 
+                          key={option.id}
+                          className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-all border group ${labelStyle}`}
+                        >
+                          <input 
+                            type="radio" 
+                            name="force" 
+                            className="w-5 h-5 text-tertiary border-outline focus:ring-tertiary"
+                            checked={isSelected}
+                            onChange={() => handleAnswer(option.id)}
+                            disabled={isCorrect === true}
+                          />
+                          <span className={`font-medium ${textStyle}`}>{option.id}. {option.text}</span>
+                          <span className={`ml-auto material-symbols-outlined ${iconStyle}`} style={{ fontVariationSettings: "'FILL' 1" }}>{iconName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {isCorrect && (
+              <ShortAnswerQuestion
+                question="Biết bán kính hạt nhân được tính theo công thức R = 1,2 × 10⁻¹⁵ × A^1/3 (m). Tính tỉ số bán kính của hạt nhân U(235, 92) và hạt nhân He(4, 2). (Làm tròn đến 2 chữ số thập phân)."
+                correctAnswer={3.89}
+                tolerance={0.05}
+                onComplete={(isCorrect) => {
+                  if (isCorrect) {
+                    setSaCompleted(true);
+                  }
+                }}
+              />
+
+              {isCorrect && saCompleted && (
                 <div className="mt-8 flex justify-end animate-in fade-in">
                   <button 
                     onClick={() => navigate('/learn/stage-4')}
